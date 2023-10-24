@@ -69,20 +69,32 @@ def get_resume_adaptive(cfg, model_kwargs):
 def main(cfg: DictConfig):
     dataset_config = cfg["dataset"]
 
-    if dataset_config["name"] in ['sbm', 'comm-20', 'planar']:
+    if dataset_config["name"] in ['sbm', 'comm-20', 'planar', 'user']:
         from datasets.spectre_dataset import SpectreGraphDataModule, SpectreDatasetInfos
-        from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics
+        from datasets.graphs_dataset import DiverseGraphsDataModule, DiverseDatasetInfos
+        from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics, DiverseGraphsSamplingMetrics
         from analysis.visualization import NonMolecularVisualization
 
-        datamodule = SpectreGraphDataModule(cfg)
-        if dataset_config['name'] == 'sbm':
-            sampling_metrics = SBMSamplingMetrics(datamodule)
-        elif dataset_config['name'] == 'comm-20':
-            sampling_metrics = Comm20SamplingMetrics(datamodule)
-        else:
-            sampling_metrics = PlanarSamplingMetrics(datamodule)
+        if dataset_config["name"] != "user":
+            datamodule = SpectreGraphDataModule(cfg)        
+                    
+            if dataset_config['name'] == 'sbm':
+                sampling_metrics = SBMSamplingMetrics(datamodule)
+            elif dataset_config['name'] == 'comm-20':
+                sampling_metrics = Comm20SamplingMetrics(datamodule)
+            else:
+                sampling_metrics = PlanarSamplingMetrics(datamodule)
+            dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
 
-        dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
+        else:
+            datamodule = DiverseGraphsDataModule(cfg)
+
+            if dataset_config["name"] == "user":
+                sampling_metrics = DiverseGraphsSamplingMetrics(datamodule)
+                dataset_infos = DiverseDatasetInfos(datamodule, dataset_config)
+            else:
+                raise ValueError(f"{dataset_config['name']=} is not implemented")
+
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
         visualization_tools = NonMolecularVisualization()
 

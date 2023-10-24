@@ -1,0 +1,4 @@
+name: user
+remove_h: null
+datadir: 'data/user/'
+graphs_file: /home/fvelikon/projects/graph_diversity_problems/results/greedy/all_distances_3M/GCD/checkpoints/0/greedy_graphs.pkl

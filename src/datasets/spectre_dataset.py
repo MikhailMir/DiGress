@@ -2,7 +2,6 @@ import os
 import pathlib
 
 import torch
-from torch.utils.data import random_split
 import torch_geometric.utils
 from torch_geometric.data import InMemoryDataset, download_url
 
@@ -10,7 +9,15 @@ from src.datasets.abstract_dataset import AbstractDataModule, AbstractDatasetInf
 
 
 class SpectreGraphDataset(InMemoryDataset):
-    def __init__(self, dataset_name, split, root, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, dataset_name, 
+                 split,
+                 root, 
+                 transform=None, 
+                 pre_transform=None, 
+                 pre_filter=None,
+                 
+                 ):
+        
         self.sbm_file = 'sbm_200.pt'
         self.planar_file = 'planar_64_200.pt'
         self.comm20_file = 'community_12_21_100.pt'
@@ -19,7 +26,6 @@ class SpectreGraphDataset(InMemoryDataset):
         self.num_graphs = 200
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
-
     @property
     def raw_file_names(self):
         return ['train.pt', 'val.pt', 'test.pt']
@@ -43,7 +49,6 @@ class SpectreGraphDataset(InMemoryDataset):
         file_path = download_url(raw_url, self.raw_dir)
 
         adjs, eigvals, eigvecs, n_nodes, max_eigval, min_eigval, same_sample, n_max = torch.load(file_path)
-
         g_cpu = torch.Generator()
         g_cpu.manual_seed(0)
 
@@ -117,7 +122,8 @@ class SpectreGraphDataModule(AbstractDataModule):
                     'test': SpectreGraphDataset(dataset_name=self.cfg.dataset.name,
                                         split='test', root=root_path)}
         # print(f'Dataset sizes: train {train_len}, val {val_len}, test {test_len}')
-
+        
+        breakpoint()
         super().__init__(cfg, datasets)
         self.inner = self.train_dataset
 
