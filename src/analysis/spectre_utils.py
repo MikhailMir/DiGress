@@ -3,7 +3,7 @@
 # Adapted from https://github.com/lrjconan/GRAN/ which in turn is adapted from https://github.com/JiaxuanYou/graph-generation
 #
 ###############################################################################
-import graph_tool.all as gt
+# import graph_tool.all as gt
 ##Navigate to the ./util/orca directory and compile orca.cpp
 # g++ -O2 -std=c++11 -o orca orca.cpp
 import os
@@ -516,21 +516,21 @@ def eval_acc_grid_graph(G_list, grid_start=10, grid_end=20):
     return count / float(len(G_list))
 
 
-def eval_acc_sbm_graph(G_list, p_intra=0.3, p_inter=0.005, strict=True, refinement_steps=1000, is_parallel=True):
-    count = 0.0
-    if is_parallel:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for prob in executor.map(is_sbm_graph,
-                                     [gg for gg in G_list], [p_intra for i in range(len(G_list))],
-                                     [p_inter for i in range(len(G_list))],
-                                     [strict for i in range(len(G_list))],
-                                     [refinement_steps for i in range(len(G_list))]):
-                count += prob
-    else:
-        for gg in G_list:
-            count += is_sbm_graph(gg, p_intra=p_intra, p_inter=p_inter, strict=strict,
-                                  refinement_steps=refinement_steps)
-    return count / float(len(G_list))
+# def eval_acc_sbm_graph(G_list, p_intra=0.3, p_inter=0.005, strict=True, refinement_steps=1000, is_parallel=True):
+#     count = 0.0
+#     if is_parallel:
+#         with concurrent.futures.ThreadPoolExecutor() as executor:
+#             for prob in executor.map(is_sbm_graph,
+#                                      [gg for gg in G_list], [p_intra for i in range(len(G_list))],
+#                                      [p_inter for i in range(len(G_list))],
+#                                      [strict for i in range(len(G_list))],
+#                                      [refinement_steps for i in range(len(G_list))]):
+#                 count += prob
+#     else:
+#         for gg in G_list:
+#             count += is_sbm_graph(gg, p_intra=p_intra, p_inter=p_inter, strict=strict,
+#                                   refinement_steps=refinement_steps)
+#     return count / float(len(G_list))
 
 
 def eval_acc_planar_graph(G_list):
@@ -605,56 +605,56 @@ def is_grid_graph(G):
         return False
 
 
-def is_sbm_graph(G, p_intra=0.3, p_inter=0.005, strict=True, refinement_steps=1000):
-    """
-    Check if how closely given graph matches a SBM with given probabilites by computing mean probability of Wald test statistic for each recovered parameter
-    """
+# def is_sbm_graph(G, p_intra=0.3, p_inter=0.005, strict=True, refinement_steps=1000):
+#     """
+#     Check if how closely given graph matches a SBM with given probabilites by computing mean probability of Wald test statistic for each recovered parameter
+#     """
 
-    adj = nx.adjacency_matrix(G).toarray()
-    idx = adj.nonzero()
-    g = gt.Graph()
-    g.add_edge_list(np.transpose(idx))
-    try:
-        state = gt.minimize_blockmodel_dl(g)
-    except ValueError:
-        if strict:
-            return False
-        else:
-            return 0.0
+#     adj = nx.adjacency_matrix(G).toarray()
+#     idx = adj.nonzero()
+#     g = gt.Graph()
+#     g.add_edge_list(np.transpose(idx))
+#     try:
+#         state = gt.minimize_blockmodel_dl(g)
+#     except ValueError:
+#         if strict:
+#             return False
+#         else:
+#             return 0.0
 
-    # Refine using merge-split MCMC
-    for i in range(refinement_steps):
-        state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
+#     # Refine using merge-split MCMC
+#     for i in range(refinement_steps):
+#         state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
 
-    b = state.get_blocks()
-    b = gt.contiguous_map(state.get_blocks())
-    state = state.copy(b=b)
-    e = state.get_matrix()
-    n_blocks = state.get_nonempty_B()
-    node_counts = state.get_nr().get_array()[:n_blocks]
-    edge_counts = e.todense()[:n_blocks, :n_blocks]
-    if strict:
-        if (node_counts > 40).sum() > 0 or (node_counts < 20).sum() > 0 or n_blocks > 5 or n_blocks < 2:
-            return False
+#     b = state.get_blocks()
+#     b = gt.contiguous_map(state.get_blocks())
+#     state = state.copy(b=b)
+#     e = state.get_matrix()
+#     n_blocks = state.get_nonempty_B()
+#     node_counts = state.get_nr().get_array()[:n_blocks]
+#     edge_counts = e.todense()[:n_blocks, :n_blocks]
+#     if strict:
+#         if (node_counts > 40).sum() > 0 or (node_counts < 20).sum() > 0 or n_blocks > 5 or n_blocks < 2:
+#             return False
 
-    max_intra_edges = node_counts * (node_counts - 1)
-    est_p_intra = np.diagonal(edge_counts) / (max_intra_edges + 1e-6)
+#     max_intra_edges = node_counts * (node_counts - 1)
+#     est_p_intra = np.diagonal(edge_counts) / (max_intra_edges + 1e-6)
 
-    max_inter_edges = node_counts.reshape((-1, 1)) @ node_counts.reshape((1, -1))
-    np.fill_diagonal(edge_counts, 0)
-    est_p_inter = edge_counts / (max_inter_edges + 1e-6)
+#     max_inter_edges = node_counts.reshape((-1, 1)) @ node_counts.reshape((1, -1))
+#     np.fill_diagonal(edge_counts, 0)
+#     est_p_inter = edge_counts / (max_inter_edges + 1e-6)
 
-    W_p_intra = (est_p_intra - p_intra) ** 2 / (est_p_intra * (1 - est_p_intra) + 1e-6)
-    W_p_inter = (est_p_inter - p_inter) ** 2 / (est_p_inter * (1 - est_p_inter) + 1e-6)
+#     W_p_intra = (est_p_intra - p_intra) ** 2 / (est_p_intra * (1 - est_p_intra) + 1e-6)
+#     W_p_inter = (est_p_inter - p_inter) ** 2 / (est_p_inter * (1 - est_p_inter) + 1e-6)
 
-    W = W_p_inter.copy()
-    np.fill_diagonal(W, W_p_intra)
-    p = 1 - chi2.cdf(abs(W), 1)
-    p = p.mean()
-    if strict:
-        return p > 0.9  # p value < 10 %
-    else:
-        return p
+#     W = W_p_inter.copy()
+#     np.fill_diagonal(W, W_p_intra)
+#     p = 1 - chi2.cdf(abs(W), 1)
+#     p = p.mean()
+#     if strict:
+#         return p > 0.9  # p value < 10 %
+#     else:
+#         return p
 
 
 def eval_fraction_isomorphic(fake_graphs, train_graphs):
@@ -841,15 +841,16 @@ class SpectreSamplingMetrics(nn.Module):
                 wandb.run.summary['planar_acc'] = planar_acc
 
         if 'sbm' or 'planar' in self.metrics_list:
-            if local_rank == 0:
-                print("Computing all fractions...")
-            frac_unique, frac_unique_non_isomorphic, fraction_unique_non_isomorphic_valid = eval_fraction_unique_non_isomorphic_valid(
-                networkx_graphs, self.train_graphs, is_sbm_graph if 'sbm' in self.metrics_list else is_planar_graph)
-            frac_non_isomorphic = 1.0 - eval_fraction_isomorphic(networkx_graphs, self.train_graphs)
-            to_log.update({'sampling/frac_unique': frac_unique,
-                           'sampling/frac_unique_non_iso': frac_unique_non_isomorphic,
-                           'sampling/frac_unic_non_iso_valid': fraction_unique_non_isomorphic_valid,
-                           'sampling/frac_non_iso': frac_non_isomorphic})
+            # if local_rank == 0:
+            #     print("Computing all fractions...")
+            # frac_unique, frac_unique_non_isomorphic, fraction_unique_non_isomorphic_valid = eval_fraction_unique_non_isomorphic_valid(
+            #     networkx_graphs, self.train_graphs, is_sbm_graph if 'sbm' in self.metrics_list else is_planar_graph)
+            # frac_non_isomorphic = 1.0 - eval_fraction_isomorphic(networkx_graphs, self.train_graphs)
+            # to_log.update({'sampling/frac_unique': frac_unique,
+            #                'sampling/frac_unique_non_iso': frac_unique_non_isomorphic,
+            #                'sampling/frac_unic_non_iso_valid': fraction_unique_non_isomorphic_valid,
+            #                'sampling/frac_non_iso': frac_non_isomorphic})
+            pass
 
         if local_rank == 0:
             print("Sampling statistics", to_log)
@@ -884,4 +885,4 @@ class DiverseGraphsSamplingMetrics(SpectreSamplingMetrics):
     def __init__(self, datamodule):
         super().__init__(datamodule=datamodule,
                          compute_emd=False,
-                         metrics_list=['degree', 'clustering', 'orbit', 'spectre', 'sbm'])
+                         metrics_list=['degree', 'clustering', 'orbit', 'spectre',])

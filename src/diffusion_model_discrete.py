@@ -6,12 +6,12 @@ import time
 import wandb
 import os
 
-from models.transformer_model import GraphTransformer
-from diffusion.noise_schedule import DiscreteUniformTransition, PredefinedNoiseScheduleDiscrete,\
+from src.models.transformer_model import GraphTransformer
+from src.diffusion.noise_schedule import DiscreteUniformTransition, PredefinedNoiseScheduleDiscrete,\
     MarginalUniformTransition
 from src.diffusion import diffusion_utils
-from metrics.train_metrics import TrainLossDiscrete
-from metrics.abstract_metrics import SumExceptBatchMetric, SumExceptBatchKL, NLL
+from src.metrics.train_metrics import TrainLossDiscrete
+from src.metrics.abstract_metrics import SumExceptBatchMetric, SumExceptBatchKL, NLL
 from src import utils
 
 
@@ -59,7 +59,6 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         self.visualization_tools = visualization_tools
         self.extra_features = extra_features
         self.domain_features = domain_features
-
         self.model = GraphTransformer(n_layers=cfg.model.n_layers,
                                       input_dims=input_dims,
                                       hidden_mlp_dims=cfg.model.hidden_mlp_dims,
@@ -91,7 +90,9 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             self.limit_dist = utils.PlaceHolder(X=x_marginals, E=e_marginals,
                                                 y=torch.ones(self.ydim_output) / self.ydim_output)
 
-        self.save_hyperparameters(ignore=['train_metrics', 'sampling_metrics'])
+        self.save_hyperparameters(
+            # ignore=['train_metrics', 'sampling_metrics']
+            )
         self.start_epoch_time = None
         self.train_iterations = None
         self.val_iterations = None
@@ -104,6 +105,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         if data.edge_index.numel() == 0:
             self.print("Found a batch with no edges. Skipping.")
             return
+        
         dense_data, node_mask = utils.to_dense(data.x, data.edge_index, data.edge_attr, data.batch)
         dense_data = dense_data.mask(node_mask)
         X, E = dense_data.X, dense_data.E
@@ -128,12 +130,14 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
         self.print("Size of the input features", self.Xdim, self.Edim, self.ydim)
         if self.local_rank == 0:
             utils.setup_wandb(self.cfg)
+            
 
     def on_train_epoch_start(self) -> None:
         self.print("Starting train epoch...")
         self.start_epoch_time = time.time()
         self.train_loss.reset()
         self.train_metrics.reset()
+        
 
     def on_train_epoch_end(self) -> None:
         to_log = self.train_loss.log_epoch_metrics()
@@ -266,7 +270,8 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
             to_save = min(samples_left_to_save, bs)
             chains_save = min(chains_left_to_save, bs)
             samples.extend(self.sample_batch(id, to_generate, num_nodes=None, save_final=to_save,
-                                             keep_chain=chains_save, number_chain_steps=self.number_chain_steps))
+                                             keep_chain=chains_save, 
+                                             number_chain_steps=self.number_chain_steps))
             id += to_generate
             samples_left_to_save -= to_save
             samples_left_to_generate -= to_generate
@@ -654,7 +659,6 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
     def compute_extra_data(self, noisy_data):
         """ At every training step (after adding noise) and step in sampling, compute extra information and append to
             the network input. """
-
         extra_features = self.extra_features(noisy_data)
         extra_molecular_features = self.domain_features(noisy_data)
 
