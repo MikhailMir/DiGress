@@ -147,7 +147,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                       f" -- {time.time() - self.start_epoch_time:.1f}s ")
         epoch_at_metrics, epoch_bond_metrics = self.train_metrics.log_epoch_metrics()
         self.print(f"Epoch {self.current_epoch}: {epoch_at_metrics} -- {epoch_bond_metrics}")
-        print(torch.cuda.memory_summary())
+        # print(torch.cuda.memory_summary())
 
     def on_validation_epoch_start(self) -> None:
         self.val_nll.reset()

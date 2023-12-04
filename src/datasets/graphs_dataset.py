@@ -37,8 +37,12 @@ class DiverseGraphsDataset(Dataset):
         self.split_to_length = {}
 
         
+        
         super().__init__(root=root, transform=transform, pre_filter=pre_filter,
-                         pre_transform=pre_transform)        
+                         pre_transform=pre_transform)
+        
+        self.split_processed_dir = Path(self.processed_dir) / self.split    
+        
         
         
         
@@ -48,10 +52,12 @@ class DiverseGraphsDataset(Dataset):
 
     @property
     def processed_file_names(self):
-            return [self.split + '.pt']
+        return [self.split + '.pt']
         
     def len(self) -> int:
-        return self.split_to_length.get(self.split, 0)
+        
+        return len(os.listdir(os.path.join(self.processed_dir, self.split)))
+
     
     def download(self):
         """
@@ -118,9 +124,9 @@ class DiverseGraphsDataset(Dataset):
         file_idx = {'train': 0, 'val': 1, 'test': 2}
         raw_dataset = torch.load(self.raw_paths[file_idx[self.split]])
         
+        data_all = []
         
-        
-        self.split_processed_dir = Path(self.processed_dir) / self.split
+        # self.split_processed_dir = Path(self.processed_dir) / self.split
         self.split_processed_dir.mkdir(exist_ok=True, parents=True)
         
         for i, adj in enumerate(raw_dataset):
@@ -138,10 +144,13 @@ class DiverseGraphsDataset(Dataset):
                 continue
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
-                
+            
+            data_all.append(data)
             filename = self.split_processed_dir / f"data_{i}.pt"
             
             torch.save(data, filename)
+        
+        torch.save(data_all, os.path.join(self.processed_dir, f"{self.split}.pt"))
 
     def get(self, idx: int):
         
