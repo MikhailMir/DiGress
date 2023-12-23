@@ -63,6 +63,9 @@ def get_resume_adaptive(cfg, model_kwargs):
     return new_cfg, model
 
 
+def get_weights_from_other_run(ckpt_path, pl_model_module):
+    model = pl_model_module.load_from_checkpoint(ckpt_path, map_location="cpu").model
+    return model.state_dict()
 
 @hydra.main(version_base='1.3', config_path='../configs', config_name='config')
 def main(cfg: DictConfig):
@@ -172,8 +175,14 @@ def main(cfg: DictConfig):
 
     if cfg.model.type == 'discrete':
         model = DiscreteDenoisingDiffusion(cfg=cfg, **model_kwargs)
+        
     else:
         model = LiftedDenoisingDiffusion(cfg=cfg, **model_kwargs)
+        
+    if 'start_weights' in cfg.dataset: # load_pretrained_weights
+        print(f"Using weights from {cfg.dataset.start_weights}")
+        model_state_dict = get_weights_from_other_run(ckpt_path=cfg.dataset.start_weights, pl_model_module=model.__class__)
+        model.model.load_state_dict(state_dict=model_state_dict)
 
     callbacks = []
 
@@ -214,7 +223,13 @@ def main(cfg: DictConfig):
                       log_every_n_steps=50 if name != 'debug' else 1,
                       logger = [])
     if not cfg.general.test_only:
+        
+        
+        
         trainer.fit(model, datamodule=datamodule, ckpt_path=cfg.general.resume)
+        
+        
+        
         if cfg.general.name not in ['debug', 'test']:
             trainer.test(model, datamodule=datamodule)
         

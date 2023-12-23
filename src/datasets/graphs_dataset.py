@@ -87,7 +87,7 @@ class DiverseGraphsDataset(Dataset):
             
             
             
-        elif isinstance(graphs_file, np.ndarray):
+        elif isinstance(graphs_file, (np.ndarray, list)):
             
             adjacencies: List[torch.FloatTensor] = to_tensor(graphs_file)
             
@@ -118,7 +118,7 @@ class DiverseGraphsDataset(Dataset):
         self.split_to_length = dict(zip(["train", "val", "test"], [train_len, val_len, test_len]))
             
         print(f"Dataset length are: {train_len=} {val_len=} {test_len=}")
-        print(f"Completed preprocessing of graphs")
+        print("Completed preprocessing of graphs")
     
     def process(self):
         file_idx = {'train': 0, 'val': 1, 'test': 2}
@@ -126,7 +126,7 @@ class DiverseGraphsDataset(Dataset):
         
         data_all = []
         
-        # self.split_processed_dir = Path(self.processed_dir) / self.split
+        self.split_processed_dir = Path(self.processed_dir) / self.split
         self.split_processed_dir.mkdir(exist_ok=True, parents=True)
         
         for i, adj in enumerate(raw_dataset):
