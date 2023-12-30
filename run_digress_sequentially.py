@@ -79,7 +79,7 @@ if __name__ == '__main__':
     outdir = args.outdir
     outdir.mkdir(parents=True, exist_ok=True)
     
-    data_dir_template = "data/user_" + args.graph_distance + "_{}"
+    data_dir_template = "data/user_" + str(args.outdir.name) + "_{}"
     
     
     # get config directory
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         
         launch_DiGress()
         
-        checkpoint_name = checkpoint_name_template.format(f"-v{step + 1}")
+        checkpoint_name = checkpoint_name_template.format(f"-v{step+1}") #if step > 0 else "last.ckpt"
         digress_checkpoints_path = next((Path(checkpoint_dir) / "checkpoints").iterdir())
         
         digress_output_dir = digress_output_subdir_template.format(step)

@@ -1,20 +1,12 @@
-import os
 import sys
-import tempfile
 from collections import defaultdict
 from functools import partial
 
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
 import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import torch.nn as nn
-import torch.optim as optim
-from torch.nn.parallel import DistributedDataParallel as DDP
+
 from tqdm import trange
-from tqdm.auto import tqdm
 
 from src.diffusion_model_discrete import DiscreteDenoisingDiffusion
 
@@ -26,11 +18,10 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 
-import networkx as nx
-from analysis import draw_graphs
-from base import DiversityBaseClass, GraphObject
+
+from base import GraphObject
 from distances import DISTANCE_TO_FUNC, ProgressParallel
-from generation import get_initial_graphs, precompute_assets_for_generated_graphs
+from generation import get_initial_graphs
 from joblib import Parallel, delayed
 from tqdm import trange
 from utils import read_pickle, save_pickle
@@ -63,10 +54,13 @@ def generate_graphs_from_model(model, number_of_graphs, batch_size=32, batch_upp
         graphs_adjacencies.extend(
             get_graphs_adjacencies_from_model(number_of_graphs=batch_size)
         )
+        
+        print(f"{batch+1}/{number_of_batches}")
     else:
         graphs_adjacencies.extend(
             get_graphs_adjacencies_from_model(number_of_graphs=graphs_w_o_batches) if graphs_w_o_batches > 0 else []
         )
+        print(f"Extra {graphs_w_o_batches} graphs")
     
     return graphs_adjacencies
 
@@ -95,7 +89,7 @@ def get_graph_objects(adjacencies, distance):
     for distance_, graph_label_entity in graph_with_computed_descriptors.items():
         graph_objects = [
             GraphObject(
-                entity=e, identification=i, _graph=g
+                _entity=e, identification=i, _graph=g
             ) for g, i, e in graph_label_entity
         ]
         
